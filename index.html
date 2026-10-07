@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2340c4">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Simulador Contraloría</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Concepto: hoja de examen óptica. Una columna de lectura; las alternativas son burbujas A–D
+   como en la cartilla, y la "hoja de respuestas" es el navegador del examen. */
+:root {
+  --papel: #f4f6f1;
+  --superficie: #ffffff;
+  --tinta: #16202a;
+  --tenue: #5a6571;
+  --linea: #d7dcd3;
+  --acento: #2340c4;
+  --acento-suave: #e5e9fb;
+  --sobre-acento: #ffffff;
+  --ok: #17703f;
+  --ok-suave: #e1f2e7;
+  --mal: #b3261e;
+  --mal-suave: #fbe6e4;
+  --marca: #9a6410;
+  --marca-suave: #fbefd9;
+  --figura: #ffffff;
+  --sombra: 0 1px 2px rgb(22 32 42 / 0.06), 0 4px 16px rgb(22 32 42 / 0.06);
+
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-texto: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-dato: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --escala: 1;
+  --radio: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --papel: #10151b; --superficie: #19212a; --tinta: #e7ebee; --tenue: #9ba6b2; --linea: #2b3540;
+    --acento: #91a4ff; --acento-suave: #222c55; --sobre-acento: #0b1020;
+    --ok: #62cc8f; --ok-suave: #15301f; --mal: #ff8d84; --mal-suave: #3b1d1b;
+    --marca: #e9b65e; --marca-suave: #3a2c12; --figura: #ffffff;
+    --sombra: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --papel: #10151b; --superficie: #19212a; --tinta: #e7ebee; --tenue: #9ba6b2; --linea: #2b3540;
+  --acento: #91a4ff; --acento-suave: #222c55; --sobre-acento: #0b1020;
+  --ok: #62cc8f; --ok-suave: #15301f; --mal: #ff8d84; --mal-suave: #3b1d1b;
+  --marca: #e9b65e; --marca-suave: #3a2c12; --figura: #ffffff;
+  --sombra: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 16px rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+}
+
+html { font-size: calc(16px * var(--escala)); }
+body {
+  background: var(--papel); color: var(--tinta);
+  font-family: var(--f-texto); font-size: 1rem; line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+}
+* { box-sizing: border-box; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; border-radius: 6px; }
+h1, h2, h3 { font-family: var(--f-display); line-height: 1.15; text-wrap: balance; margin: 0; }
+h1 { font-size: 1.75rem; font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.25rem; font-weight: 800; }
+h3 { font-size: 1.02rem; font-weight: 600; }
+p { margin: 0; }
+.mono { font-family: var(--f-dato); font-variant-numeric: tabular-nums; }
+.tenue { color: var(--tenue); }
+.eti { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tenue); font-weight: 700; }
+
+/* --- Estructura --- */
+.app { max-width: 46rem; margin: 0 auto; padding-inline: 16px; padding-block: 0 6.5rem; }
+.barra {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  background: var(--papel); border-bottom: 1px solid var(--linea);
+  margin-inline: -16px; padding: 0.7rem 16px;
+  display: flex; align-items: center; gap: 0.75rem;
+}
+.barra .titulo { flex: 1; min-width: 0; }
+.barra .titulo strong { display: block; font-family: var(--f-display); font-weight: 800; font-size: 1.05rem; line-height: 1.2; }
+.barra .titulo span { display: block; font-size: 0.8rem; color: var(--tenue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pila { display: flex; flex-direction: column; gap: 1rem; padding-block: 1rem; }
+.fila { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.fila > * { min-width: 0; }
+
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--superficie); border-top: 1px solid var(--linea);
+  padding: 0.35rem 8px calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+}
+.tabs button {
+  border: 0; background: none; padding: 0.45rem 0.25rem; border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 0.75rem; color: var(--tenue); font-weight: 700;
+}
+.tabs button svg { width: 22px; height: 22px; }
+.tabs button[aria-current="page"] { color: var(--acento); background: var(--acento-suave); }
+
+/* --- Superficies y controles --- */
+.panel { background: var(--superficie); border: 1px solid var(--linea); border-radius: var(--radio); padding: 1rem; display: flex; flex-direction: column; gap: 0.85rem; }
+.btn {
+  border: 1px solid var(--linea); background: var(--superficie); border-radius: 999px;
+  padding: 0.6rem 1.1rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  min-height: 2.75rem;
+}
+.btn.primario { background: var(--acento); color: var(--sobre-acento); border-color: var(--acento); }
+.btn.peligro { color: var(--mal); }
+.btn.ancho { width: 100%; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.icono { border: 0; background: none; padding: 0.5rem; border-radius: 999px; display: inline-flex; color: var(--tinta); }
+.icono svg { width: 22px; height: 22px; }
+
+.segmento { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--papel); border: 1px solid var(--linea); border-radius: 999px; padding: 3px; }
+.segmento button { border: 0; background: none; border-radius: 999px; padding: 0.5rem 0.6rem; font-weight: 700; color: var(--tenue); }
+.segmento button[aria-pressed="true"] { background: var(--superficie); color: var(--tinta); box-shadow: var(--sombra); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip {
+  border: 1px solid var(--linea); background: var(--superficie); border-radius: 999px;
+  padding: 0.35rem 0.75rem; font-size: 0.88rem; display: inline-flex; gap: 0.35rem; align-items: center;
+}
+.chip[aria-pressed="true"] { background: var(--acento-suave); border-color: var(--acento); color: var(--tinta); font-weight: 700; }
+.chip .n { font-family: var(--f-dato); font-size: 0.78rem; color: var(--tenue); }
+.etiqueta { font-size: 0.78rem; padding: 0.15rem 0.55rem; border-radius: 999px; background: var(--papel); border: 1px solid var(--linea); color: var(--tenue); }
+.etiqueta.repetida { background: var(--marca-suave); border-color: transparent; color: var(--marca); font-weight: 700; }
+
+.interruptor { display: flex; gap: 0.75rem; align-items: flex-start; padding-block: 0.35rem; }
+.interruptor input { width: 1.25rem; height: 1.25rem; accent-color: var(--acento); margin-top: 0.15rem; flex: none; }
+.interruptor small { display: block; color: var(--tenue); font-size: 0.82rem; }
+
+.buscador { position: relative; }
+.buscador input {
+  width: 100%; border: 1px solid var(--linea); border-radius: 8px; background: var(--superficie);
+  padding: 0.65rem 0.8rem; min-height: 2.75rem;
+}
+.sugerencias { list-style: none; margin: 0.35rem 0 0; padding: 0; border: 1px solid var(--linea); border-radius: 8px; background: var(--superficie); max-height: 15rem; overflow-y: auto; }
+.sugerencias button { width: 100%; text-align: left; border: 0; background: none; padding: 0.6rem 0.8rem; border-bottom: 1px solid var(--linea); font-size: 0.9rem; display: flex; gap: 0.5rem; align-items: baseline; }
+.sugerencias li:last-child button { border-bottom: 0; }
+.sugerencias button[aria-selected="true"] { background: var(--acento-suave); font-weight: 700; }
+.objetivo { font-size: 0.7rem; font-weight: 700; color: var(--acento); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+
+.paso { display: flex; align-items: center; gap: 0.75rem; }
+.paso button { width: 2.75rem; height: 2.75rem; border-radius: 999px; border: 1px solid var(--linea); background: var(--superficie); font-size: 1.3rem; font-weight: 700; }
+.paso output { font-family: var(--f-display); font-weight: 800; font-size: 2rem; min-width: 2.5ch; text-align: center; font-variant-numeric: tabular-nums; }
+
+.aviso { border-radius: var(--radio); padding: 0.85rem 1rem; background: var(--marca-suave); color: var(--tinta); display: flex; flex-direction: column; gap: 0.6rem; }
+.aviso.error { background: var(--mal-suave); }
+
+/* --- Inicio --- */
+.portada { display: flex; flex-direction: column; gap: 0.4rem; padding-top: 0.5rem; }
+.portada .sello { font-family: var(--f-dato); font-size: 0.78rem; color: var(--acento); letter-spacing: 0.04em; }
+.resumen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.dato { background: var(--superficie); border: 1px solid var(--linea); border-radius: var(--radio); padding: 0.75rem; display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.dato b { font-family: var(--f-display); font-size: 1.45rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.dato span { font-size: 0.78rem; color: var(--tenue); }
+.retomar { background: var(--acento-suave); border: 1px solid var(--acento); }
+.atajo { text-align: left; width: 100%; border: 1px solid var(--linea); background: var(--superficie); border-radius: var(--radio); padding: 0.9rem 1rem; display: grid; grid-template-columns: 1fr auto; gap: 0.15rem 0.75rem; align-items: center; }
+.atajo strong { font-family: var(--f-display); font-weight: 600; font-size: 1.02rem; }
+.atajo span { color: var(--tenue); font-size: 0.86rem; grid-column: 1; }
+.atajo svg { grid-row: 1 / span 2; grid-column: 2; width: 22px; height: 22px; color: var(--acento); }
+
+/* --- Examen --- */
+.progreso { height: 6px; background: var(--linea); border-radius: 999px; overflow: hidden; margin-top: 0.45rem; }
+.progreso i { display: block; height: 100%; background: var(--acento); transition: width .25s ease; }
+.reloj { font-family: var(--f-dato); font-size: 1rem; padding: 0.3rem 0.6rem; border-radius: 8px; background: var(--superficie); border: 1px solid var(--linea); font-variant-numeric: tabular-nums; }
+.reloj.poco { color: var(--mal); border-color: var(--mal); }
+.contexto { background: var(--superficie); border: 1px solid var(--linea); border-radius: var(--radio); }
+.contexto summary { padding: 0.75rem 1rem; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; gap: 0.5rem; }
+.contexto div { padding: 0 1rem 1rem; max-height: 50vh; overflow-y: auto; white-space: pre-line; }
+.enunciado { font-size: 1.12rem; line-height: 1.6; max-width: 65ch; }
+.figura { background: var(--figura); border: 1px solid var(--linea); border-radius: 8px; padding: 0.4rem; display: block; width: 100%; position: relative; }
+.figura img { display: block; width: 100%; height: auto; }
+.figura .lupa { position: absolute; right: 0.4rem; bottom: 0.4rem; background: rgb(22 32 42 / 0.75); color: #fff; border-radius: 999px; padding: 0.2rem 0.55rem; font-size: 0.75rem; font-weight: 700; }
+.opciones { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.opcion {
+  width: 100%; text-align: left; border: 1px solid var(--linea); background: var(--superficie); border-radius: var(--radio);
+  padding: 0.75rem 0.85rem; display: grid; grid-template-columns: auto 1fr auto; gap: 0.75rem; align-items: center; min-height: 3.2rem;
+}
+.burbuja {
+  width: 2rem; height: 2rem; border-radius: 999px; border: 2px solid var(--tenue); display: grid; place-items: center;
+  font-family: var(--f-dato); font-size: 0.9rem; flex: none;
+}
+.opcion[aria-pressed="true"] { border-color: var(--acento); background: var(--acento-suave); }
+.opcion[aria-pressed="true"] .burbuja { background: var(--acento); border-color: var(--acento); color: var(--sobre-acento); }
+.opcion.correcta { border-color: var(--ok); background: var(--ok-suave); }
+.opcion.correcta .burbuja { background: var(--ok); border-color: var(--ok); color: var(--superficie); }
+.opcion.incorrecta { border-color: var(--mal); background: var(--mal-suave); }
+.opcion.incorrecta .burbuja { background: var(--mal); border-color: var(--mal); color: var(--superficie); }
+.opcion .veredicto { font-size: 0.78rem; font-weight: 700; }
+.opcion:disabled { cursor: default; }
+.solucion { border-left: 4px solid var(--ok); background: var(--superficie); border-radius: 0 var(--radio) var(--radio) 0; padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.solucion.mal { border-left-color: var(--mal); }
+.solucion .resultado { font-family: var(--f-display); font-weight: 800; font-size: 1.1rem; }
+.base { font-size: 0.88rem; color: var(--tenue); }
+.base b { color: var(--tinta); }
+
+.acciones {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+  background: var(--superficie); border-top: 1px solid var(--linea);
+  padding: 0.55rem 16px calc(0.55rem + env(safe-area-inset-bottom, 0px));
+}
+.acciones .dentro { max-width: 46rem; margin: 0 auto; display: grid; grid-template-columns: auto 1fr auto auto; gap: 0.5rem; align-items: center; }
+
+/* Hoja de respuestas */
+.hoja-fondo { position: fixed; inset: 0; z-index: 20; background: rgb(10 14 20 / 0.45); display: flex; align-items: flex-end; justify-content: center; }
+.hoja {
+  background: var(--superficie); width: 100%; max-width: 46rem; border-radius: 16px 16px 0 0;
+  padding: 1rem 16px calc(1rem + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 1rem; max-height: 85vh; overflow-y: auto;
+}
+.rejilla { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem; }
+.casilla { aspect-ratio: 1; max-width: 100%; border-radius: 10px; border: 1px solid var(--linea); background: var(--papel); font-family: var(--f-dato); font-size: 1rem; display: grid; place-items: center; position: relative; }
+.casilla.resp { background: var(--acento-suave); border-color: var(--acento); }
+.casilla.ok { background: var(--ok-suave); border-color: var(--ok); }
+.casilla.mal { background: var(--mal-suave); border-color: var(--mal); }
+.casilla.actual { outline: 3px solid var(--tinta); outline-offset: 1px; }
+.casilla .pin { position: absolute; top: 4px; right: 5px; width: 8px; height: 8px; border-radius: 999px; background: var(--marca); }
+.leyenda { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; font-size: 0.8rem; color: var(--tenue); }
+.leyenda i { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 3px; vertical-align: -1px; margin-right: 0.3rem; border: 1px solid var(--linea); }
+
+/* Visor con zoom */
+.visor { position: fixed; inset: 0; z-index: 30; background: #0b0f14; display: flex; flex-direction: column; }
+.visor .lienzo { flex: 1; overflow: hidden; touch-action: none; display: grid; place-items: center; }
+.visor img { background: #fff; max-width: 100%; transform-origin: center center; user-select: none; -webkit-user-drag: none; }
+.visor .controles { display: flex; justify-content: center; gap: 0.75rem; padding: 0.75rem 16px calc(0.75rem + env(safe-area-inset-bottom, 0px)); }
+.visor .controles button { background: #222a33; color: #fff; border: 0; border-radius: 999px; min-width: 3rem; height: 3rem; font-size: 1.2rem; font-weight: 700; padding-inline: 1rem; }
+.visor .pista { color: #b9c2cc; text-align: center; font-size: 0.82rem; padding-top: calc(0.75rem + env(safe-area-inset-top, 0px)); }
+
+/* --- Resultados y progreso --- */
+.puntaje { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1.25rem; align-items: center; }
+.puntaje .grande { font-family: var(--f-display); font-weight: 800; font-size: 3.4rem; line-height: 1; font-variant-numeric: tabular-nums; grid-row: span 2; }
+.puntaje .grande small { font-size: 1.4rem; color: var(--tenue); }
+.barras { display: flex; flex-direction: column; gap: 0.6rem; }
+.barra-tema { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.2rem 0.75rem; font-size: 0.9rem; }
+.barra-tema .pista-barra { grid-column: 1 / -1; height: 8px; background: var(--papel); border: 1px solid var(--linea); border-radius: 999px; overflow: hidden; }
+.barra-tema .pista-barra i { display: block; height: 100%; background: var(--acento); }
+.barra-tema .pista-barra i.bajo { background: var(--mal); }
+.revision { display: flex; flex-direction: column; gap: 0.5rem; }
+.revision details { background: var(--superficie); border: 1px solid var(--linea); border-radius: var(--radio); }
+.revision summary { padding: 0.75rem 0.9rem; cursor: pointer; display: grid; grid-template-columns: auto 1fr; gap: 0.75rem; align-items: start; }
+.revision summary .num { width: 1.9rem; height: 1.9rem; border-radius: 999px; display: grid; place-items: center; font-family: var(--f-dato); font-size: 0.85rem; color: var(--superficie); }
+.revision summary .num.ok { background: var(--ok); }
+.revision summary .num.mal { background: var(--mal); }
+.revision summary .num.vacio { background: var(--tenue); }
+.revision summary p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.revision .cuerpo { padding: 0 0.9rem 0.9rem; display: flex; flex-direction: column; gap: 0.6rem; }
+.lista-res { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.92rem; }
+.lista-res li { display: grid; grid-template-columns: 1.6rem 1fr; gap: 0.4rem; }
+.lista-res li.ok { color: var(--ok); font-weight: 700; }
+.lista-res li.mal { color: var(--mal); text-decoration: line-through; }
+.grafico { width: 100%; height: auto; display: block; }
+.historial { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.historial li { display: grid; grid-template-columns: 1fr auto; gap: 0.1rem 0.75rem; padding: 0.7rem 0; border-bottom: 1px solid var(--linea); align-items: center; }
+.historial li:last-child { border-bottom: 0; }
+.historial .pct { font-family: var(--f-display); font-weight: 800; font-size: 1.2rem; grid-row: span 2; font-variant-numeric: tabular-nums; }
+.historial small { color: var(--tenue); font-size: 0.82rem; }
+.tabla-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+th, td { text-align: left; padding: 0.5rem 0.4rem; border-bottom: 1px solid var(--linea); }
+th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--tenue); }
+td.num, th.num { text-align: right; font-family: var(--f-dato); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.fav { color: var(--tenue); }
+.fav[aria-pressed="true"] { color: var(--marca); }
+.fav[aria-pressed="true"] svg { fill: currentColor; }
+
+.vacio { text-align: center; color: var(--tenue); padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: center; }
+.cargando { min-height: 60vh; display: grid; place-items: center; text-align: center; color: var(--tenue); }
+.toast { position: fixed; left: 50%; bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 40; background: var(--tinta); color: var(--papel); padding: 0.6rem 1rem; border-radius: 999px; font-size: 0.9rem; max-width: calc(100% - 32px); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<script src="preguntas.js"></script>
+<script src="imagenes-1.js"></script>
+<script src="imagenes-2.js"></script>
+<div id="raiz"><div class="cargando"><p>Cargando banco de preguntas…</p></div></div>
+<div id="capa"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   Simulador Contraloría — versión web
+   Banco: banco/preguntas.json + banco/imagenes/ (publicados junto a la página)
+   Progreso: db privado por usuario (data/users/<id>/...) o, sin cuenta, este navegador.
+   ============================================================ */
+
+const MAX_PREGUNTAS = 10;
+const LETRAS = ["A", "B", "C", "D"];
+const PUESTO_OBJETIVO = "AUDITOR/A ANALISTA 1 EN SISTEMAS ADMINISTRATIVOS";
+
+// ---------- Utilidades ----------
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const normalizar = (s) => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const mmss = (seg) => { seg = Math.max(0, Math.round(seg)); const m = Math.floor(seg / 60), s = seg % 60; return `${m}:${String(s).padStart(2, "0")}`; };
+const pct = (a, b) => (b ? Math.round((100 * a) / b) : 0);
+const idNuevo = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+const fechaCorta = (ms) => new Date(ms).toLocaleDateString("es-PE", { day: "2-digit", month: "short" }) + " · " + new Date(ms).toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" });
+const local = {
+  leer(k, def) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } },
+  escribir(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } },
+};
+
+const ICON = {
+  inicio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>',
+  practicar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="9" cy="9" r="1.6"/><circle cx="9" cy="15" r="1.6"/><path d="M13 9h4M13 15h4"/></svg>',
+  progreso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4-4 3 3 6-7"/></svg>',
+  mas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>',
+  estrella: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  cerrar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  flecha: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>',
+  hoja: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>',
+  bandera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h11l-2 4 2 4H5"/></svg>',
+};
+
+const rutaImg = (r) => (window.IMAGENES && window.IMAGENES[r]) || "banco/" + esc(r);
+
+// ---------- Estado ----------
+const E = {
+  banco: null, porId: new Map(), puestos: [], grupos: [], contextos: new Map(),
+  intentos: [], favoritos: new Set(), enCurso: null,
+  stats: new Map(),            // id -> {vistas, aciertos, fallos, ultima}
+  vista: "inicio",
+  conf: null,
+  examen: null,                // examen activo en pantalla
+  resultado: null,             // intento mostrado en resultados
+  ajustes: local.leer("simcgr.ajustes", { escala: 1, segundos: 90 }),
+  almacenTipo: "cargando",
+};
+
+const CONF_DEFECTO = () => ({
+  por: "puesto", puesto: PUESTO_OBJETIVO, grupo: "Sistemas Administrativos",
+  tipo: "CONOCIMIENTO", temas: [], niveles: ["2"], areas: [], subtemas: [],
+  cantidad: 10, soloFalladas: false, soloNoVistas: false, priorizarRepetidas: false,
+  modo: "PRACTICA",
+});
+
+// ---------- Almacén del progreso ----------
+// Con cuenta: documentos privados del viewer. Sin cuenta: este navegador.
+const Almacen = {
+  db: null, perfil: null, coleccion: null, cadena: Promise.resolve(), pendiente: null,
+
+  async iniciar() {
+    let db = null, user = null;
+    try {
+      if (window.claude && typeof window.claude.use === "function") {
+        [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      }
+    } catch { db = null; }
+    const uid = user ? await user.id() : null;
+    if (db && uid) {
+      try {
+        this.db = db;
+        this.perfil = db.doc(`data/users/${uid}/perfil`);
+        this.coleccion = this.perfil.collection("intentos");
+        const [p, q] = await Promise.all([this.perfil.get(), this.coleccion.orderBy("fecha", "desc").limit(1000).get()]);
+        const d = p.exists ? p.data() : {};
+        E.favoritos = new Set(d.favoritos || []);
+        E.enCurso = d.enCurso || null;
+        E.intentos = q.docs.map((x) => x.data());
+        E.almacenTipo = "cuenta";
+        return;
+      } catch (e) {
+        console.warn("db no disponible, se usa el navegador", e);
+        this.db = null;
+      }
+    }
+    const l = local.leer("simcgr.progreso", { favoritos: [], enCurso: null, intentos: [] });
+    E.favoritos = new Set(l.favoritos);
+    E.enCurso = l.enCurso;
+    E.intentos = (l.intentos || []).sort((a, b) => b.fecha - a.fecha);
+    E.almacenTipo = "navegador";
+  },
+
+  guardarLocal() {
+    local.escribir("simcgr.progreso", { favoritos: [...E.favoritos], enCurso: E.enCurso, intentos: E.intentos });
+  },
+
+  /** Perfil (favoritos + examen en pausa): un solo documento, escrituras en fila y agrupadas. */
+  guardarPerfil() {
+    if (!this.db) return this.guardarLocal();
+    this.pendiente = { favoritos: [...E.favoritos], enCurso: E.enCurso };
+    this.cadena = this.cadena.then(async () => {
+      if (!this.pendiente) return;
+      const cuerpo = this.pendiente; this.pendiente = null;
+      try { await this.perfil.set(cuerpo); } catch (e) { manejarErrorGuardado(e); }
+    });
+    return this.cadena;
+  },
+
+  async guardarIntento(intento) {
+    if (!this.db) return this.guardarLocal();
+    try { await this.coleccion.doc(intento.id).set(intento); } catch (e) { manejarErrorGuardado(e); }
+  },
+
+  async borrarTodo() {
+    if (!this.db) { E.intentos = []; E.enCurso = null; E.favoritos = new Set(); return this.guardarLocal(); }
+    for (const i of E.intentos) { try { await this.coleccion.doc(i.id).delete(); } catch { /* continúa */ } }
+    E.intentos = []; E.enCurso = null; E.favoritos = new Set();
+    await this.guardarPerfil();
+  },
+};
+
+function manejarErrorGuardado(e) {
+  const code = e && e.code;
+  if (code === "quota_exceeded") avisar("Se llenó el espacio del historial. Borra el progreso en Más para seguir guardando.");
+  else if (code === "invalid_argument" || code === "revoked" || code === "not_granted") avisar("No se pudo guardar tu progreso en esta vista.");
+  else avisar("No se pudo guardar. Revisa tu conexión.");
+}
+
+// ---------- Estadísticas por pregunta ----------
+function recalcularStats() {
+  const s = new Map();
+  // de lo más antiguo a lo más reciente, para que "ultima" sea la última respuesta
+  for (const it of [...E.intentos].sort((a, b) => a.fecha - b.fecha)) {
+    for (const r of it.respuestas || []) {
+      if (r.e === null || r.e === undefined) continue;
+      const x = s.get(r.id) || { vistas: 0, aciertos: 0, fallos: 0, ultima: null };
+      x.vistas++; r.c ? x.aciertos++ : x.fallos++; x.ultima = !!r.c;
+      s.set(r.id, x);
+    }
+  }
+  E.stats = s;
+}
+const fallada = (id) => { const x = E.stats.get(id); return !!x && x.fallos > 0; };
+const vista = (id) => E.stats.has(id);
+
+// ---------- Carga del banco ----------
+async function cargarBanco() {
+  // Abierto con doble clic (file://) Chrome no permite fetch: el banco viene en banco/preguntas.js
+  let b = window.BANCO_PREGUNTAS;
+  if (!b) {
+    const r = await fetch("banco/preguntas.json");
+    if (!r.ok) throw new Error("No se pudo descargar el banco de preguntas.");
+    b = await r.json();
+  }
+  E.banco = b;
+  for (const p of b.preguntas) {
+    p.nivel = p.nivel ? String(p.nivel) : "";
+    E.porId.set(p.id, p);
+    if (p.contexto) {
+      if (!E.contextos.has(p.contexto)) E.contextos.set(p.contexto, []);
+      E.contextos.get(p.contexto).push(p.id);
+    }
+  }
+  E.grupos = [...b.grupos].sort((a, c) => a.prioridad - c.prioridad);
+  E.puestos = [...b.puestos].map((p) => ({ ...p, esObjetivo: /^puesto objetivo/i.test(p.nota || ""), norm: normalizar(p.nombre) }))
+    .sort((a, c) => (c.esObjetivo - a.esObjetivo) || a.nombre.localeCompare(c.nombre, "es"));
+}
+
+// ---------- Pool y generador ----------
+/**
+ * Arma las preguntas candidatas según la configuración.
+ * relajacion: 0 = estricto · 1 = suma grupos afines / todos los niveles · 2 = sin filtro de tema · 3 = sin filtros personales
+ */
+function construirPool(conf, relajacion = 0) {
+  const pool = [];
+  const temas = new Set(conf.temas), niveles = new Set(conf.niveles), areas = new Set(conf.areas), subs = new Set(conf.subtemas);
+  const prioGrupo = new Map(E.grupos.map((g) => [g.nombre, g.prioridad]));
+  const puesto = E.puestos.find((p) => p.nombre === conf.puesto);
+
+  for (const p of E.banco.preguntas) {
+    if (p.tipoExamen !== conf.tipo) continue;
+    let afinidad;
+    if (conf.tipo === "CONOCIMIENTO") {
+      if (conf.por === "puesto" && puesto) {
+        if (p.puestos.includes(puesto.nombre)) afinidad = 0;
+        else {
+          const ps = p.grupos.map((g) => puesto.grupos.indexOf(g)).filter((i) => i >= 0);
+          if (ps.length) afinidad = Math.min(...ps) + 1;
+        }
+      } else if (p.grupos.includes(conf.grupo)) afinidad = 1;
+      if (afinidad === undefined) {
+        if (relajacion < 1) continue;
+        afinidad = 10 + Math.min(...p.grupos.map((g) => prioGrupo.get(g) || 9));
+      }
+      if (relajacion < 2 && temas.size && !temas.has(p.tema)) continue;
+    } else {
+      afinidad = 1;
+      if (niveles.size && !niveles.has(p.nivel)) { if (relajacion < 1) continue; afinidad = 10; }
+      if (relajacion < 2) {
+        if (areas.size && !areas.has(p.tema)) continue;
+        if (subs.size && !subs.has(p.subtema)) continue;
+      }
+    }
+    if (relajacion < 3) {
+      const quiereF = conf.soloFalladas, quiereN = conf.soloNoVistas;
+      if (quiereF || quiereN) {
+        const ok = (quiereF && fallada(p.id)) || (quiereN && !vista(p.id));
+        if (!ok) continue;
+      }
+    }
+    pool.push({ p, afinidad });
+  }
+  return pool;
+}
+
+function peso({ p, afinidad }, conf) {
+  const fa = afinidad === 0 ? 1 : afinidad >= 10 ? 0.35 : Math.max(0.5, 1 - 0.13 * afinidad);
+  const st = E.stats.get(p.id);
+  const fv = st ? 1 : 3;                                   // no vistas primero
+  const ff = st && st.fallos > 0 ? (st.ultima === false ? 2.5 : 1.6) : 1;   // falladas antes
+  const ap = Math.max(1, p.apariciones || 1);
+  const fr = conf.priorizarRepetidas ? 1 + 1.4 * Math.log(ap) : 1 + 0.35 * Math.log(ap);
+  return fa * fv * ff * fr;
+}
+
+/** Fisher–Yates; las preguntas con imagen conservan A–D porque las letras están en la figura. */
+function permutacion(p, rnd = Math.random) {
+  const orden = [0, 1, 2, 3];
+  if (p.requiereImagen) return orden;
+  for (let i = 3; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [orden[i], orden[j]] = [orden[j], orden[i]]; }
+  return orden;
+}
+
+/**
+ * Selección aleatoria ponderada sin reemplazo (Efraimidis–Spirakis: clave u^(1/w)).
+ * Una lectura compartida entra con sus preguntas hermanas del pool mientras quepan.
+ */
+function generar(pool, cantidad, conf, rnd = Math.random) {
+  cantidad = Math.max(1, Math.min(MAX_PREGUNTAS, cantidad | 0));
+  const enPool = new Map(pool.map((x) => [x.p.id, x]));
+  const ordenados = pool.map((x) => ({ x, k: Math.pow(rnd() || 1e-12, 1 / peso(x, conf)) })).sort((a, b) => b.k - a.k);
+  const elegidos = [], usados = new Set();
+  for (const { x } of ordenados) {
+    if (elegidos.length >= cantidad) break;
+    if (usados.has(x.p.id)) continue;
+    if (x.p.contexto) {
+      const hermanas = (E.contextos.get(x.p.contexto) || []).filter((id) => enPool.has(id) && !usados.has(id));
+      // la elegida primero entre sus hermanas, luego el resto en orden del texto
+      const bloque = [x.p.id, ...hermanas.filter((id) => id !== x.p.id)].slice(0, cantidad - elegidos.length);
+      bloque.sort((a, b) => a.localeCompare(b));
+      for (const id of bloque) { usados.add(id); elegidos.push(enPool.get(id).p); }
+    } else {
+      usados.add(x.p.id); elegidos.push(x.p);
+    }
+  }
+  return elegidos.map((p) => ({ id: p.id, perm: permutacion(p, rnd) }));
+}
+
+function nuevoExamen(items, conf, etiqueta) {
+  const segundos = E.ajustes.segundos || 90;
+  return {
+    id: idNuevo(), creado: Date.now(), modo: conf.modo, tipo: conf.tipo, etiqueta,
+    por: conf.por, items, resp: {}, marcadas: [], indice: 0,
+    segundosPorPregunta: segundos,
+    restante: conf.modo === "SIMULACRO" ? segundos * items.length : null,
+    usado: 0,
+  };
+}
+
+function etiquetaConf(conf) {
+  if (conf.tipo === "APTITUD") {
+    const nv = conf.niveles.length ? "Nivel " + [...conf.niveles].sort().join(", ") : "Todos los niveles";
+    return "Aptitud · " + nv;
+  }
+  return conf.por === "puesto" ? conf.puesto : "Grupo: " + conf.grupo;
+}
+
+// ---------- Vistas ----------
+const raiz = document.getElementById("raiz");
+const capa = document.getElementById("capa");
+let temporizador = null;
+
+function render() {
+  detenerReloj();
+  if (E.vista === "examen" && E.examen) return renderExamen();
+  const vistas = { inicio: vInicio, practicar: vPracticar, progreso: vProgreso, mas: vMas, resultados: vResultados, favoritos: vFavoritos };
+  const contenido = (vistas[E.vista] || vInicio)();
+  const tab = ["inicio", "practicar", "progreso", "mas"].includes(E.vista) ? E.vista : E.vista === "favoritos" ? "mas" : E.vista === "resultados" ? "progreso" : "";
+  raiz.innerHTML = `<div class="app">${contenido}</div>
+    <nav class="tabs" aria-label="Secciones">
+      ${[["inicio", "Inicio"], ["practicar", "Practicar"], ["progreso", "Progreso"], ["mas", "Más"]].map(([k, t]) =>
+        `<button data-ir="${k}" ${tab === k ? 'aria-current="page"' : ""}>${ICON[k]}<span>${t}</span></button>`).join("")}
+    </nav>`;
+  window.scrollTo(0, 0);
+}
+
+function barra(titulo, sub, extra = "") {
+  return `<header class="barra"><div class="titulo"><strong>${esc(titulo)}</strong>${sub ? `<span>${esc(sub)}</span>` : ""}</div>${extra}</header>`;
+}
+
+// ----- Inicio -----
+function vInicio() {
+  const total = E.banco.preguntas.length;
+  const vistas = E.stats.size;
+  const aciertos = [...E.stats.values()].reduce((a, x) => a + (x.ultima ? 1 : 0), 0);
+  const ultimos = E.intentos.slice(0, 5);
+  const prom = ultimos.length ? Math.round(ultimos.reduce((a, i) => a + pct(i.correctas, i.total), 0) / ultimos.length) : null;
+  const ec = E.enCurso;
+  const errores = idsErrores().length;
+  return `
+  <div class="pila">
+    <section class="portada">
+      <span class="sello">CGR · Concurso Público de Méritos</span>
+      <h1>Simulador Contraloría</h1>
+      <p class="tenue">${total} preguntas de los solucionarios oficiales: ${E.banco.preguntas.filter((p) => p.tipoExamen === "CONOCIMIENTO").length} de conocimientos y ${E.banco.preguntas.filter((p) => p.tipoExamen === "APTITUD").length} de aptitud.</p>
+    </section>
+
+    ${ec ? `<section class="panel retomar">
+      <div><span class="eti">Examen en pausa</span><h3>${esc(ec.etiqueta)}</h3>
+      <p class="tenue">${Object.keys(ec.resp).length} de ${ec.items.length} respondidas · ${ec.modo === "SIMULACRO" ? "Simulacro, quedan " + mmss(ec.restante) : "Práctica"}</p></div>
+      <div class="fila"><button class="btn primario" data-accion="retomar">Retomar examen</button><button class="btn" data-accion="descartar">Descartar</button></div>
+    </section>` : ""}
+
+    <section class="resumen" aria-label="Tu avance">
+      <div class="dato"><b>${pct(vistas, total)}%</b><span>del banco visto</span></div>
+      <div class="dato"><b>${aciertos}</b><span>acertadas</span></div>
+      <div class="dato"><b>${prom === null ? "—" : prom + "%"}</b><span>últimos 5 exámenes</span></div>
+    </section>
+
+    <section class="pila" style="padding-block:0">
+      <span class="eti">Empezar rápido</span>
+      <button class="atajo" data-accion="rapido" data-tipo="CONOCIMIENTO">
+        <strong>Conocimientos · 10 preguntas</strong><span>${esc(PUESTO_OBJETIVO)} y sus grupos afines</span>${ICON.flecha}</button>
+      <button class="atajo" data-accion="rapido" data-tipo="APTITUD">
+        <strong>Aptitud · Nivel 2 · 10 preguntas</strong><span>Razonamiento verbal y lógico-matemático</span>${ICON.flecha}</button>
+      ${errores ? `<button class="atajo" data-accion="errores">
+        <strong>Practicar mis errores</strong><span>${errores} preguntas que fallaste la última vez</span>${ICON.flecha}</button>` : ""}
+      <button class="atajo" data-ir="practicar"><strong>Configurar un examen</strong><span>Puesto, grupo, temas, niveles, modo y filtros</span>${ICON.flecha}</button>
+    </section>
+
+    <p class="tenue" style="font-size:.82rem">${E.almacenTipo === "cuenta" ? "Tu progreso se guarda en tu cuenta y solo tú lo ves." : E.almacenTipo === "navegador" ? "Tu progreso se guarda en este navegador." : "Cargando tu progreso…"}</p>
+  </div>`;
+}
+
+// ----- Practicar (configuración) -----
+function vPracticar() {
+  const c = E.conf;
+  const pool = construirPool(c, 0);
+  const disponibles = pool.length;
+  const puesto = E.puestos.find((p) => p.nombre === c.puesto);
+
+  let bloqueSeleccion = "";
+  if (c.tipo === "CONOCIMIENTO") {
+    const conteoGrupo = (g) => E.banco.preguntas.filter((p) => p.tipoExamen === "CONOCIMIENTO" && p.grupos.includes(g)).length;
+    const propias = puesto ? E.banco.preguntas.filter((p) => p.tipoExamen === "CONOCIMIENTO" && p.puestos.includes(puesto.nombre)).length : 0;
+    bloqueSeleccion = `
+      <div class="segmento" role="group" aria-label="Elegir por">
+        <button data-conf="por" data-valor="puesto" aria-pressed="${c.por === "puesto"}">Por puesto</button>
+        <button data-conf="por" data-valor="grupo" aria-pressed="${c.por === "grupo"}">Por grupo afín</button>
+      </div>
+      ${c.por === "puesto" ? `
+        <div class="buscador">
+          <label class="eti" for="buscar-puesto">Puesto</label>
+          <input id="buscar-puesto" type="search" autocomplete="off" placeholder="Escribe parte del nombre del puesto" value="">
+          <ul class="sugerencias" id="sugerencias" role="listbox" aria-label="Puestos">${listaPuestos("")}</ul>
+        </div>
+        ${puesto ? `<div class="fila"><span class="etiqueta">Seleccionado</span><strong style="font-size:.92rem">${esc(puesto.nombre)}</strong>${puesto.esObjetivo ? '<span class="objetivo">Puesto objetivo</span>' : ""}</div>
+        <div class="tabla-wrap"><table><thead><tr><th>Pool de conocimientos</th><th class="num">Preguntas</th></tr></thead><tbody>
+          <tr><td>Del propio puesto</td><td class="num">${propias}</td></tr>
+          ${puesto.grupos.map((g, i) => `<tr><td>${i + 1}. ${esc(g)}</td><td class="num">${conteoGrupo(g)}</td></tr>`).join("")}
+        </tbody></table></div>` : ""}` : `
+        <div class="chips" role="group" aria-label="Grupo afín">${E.grupos.map((g) =>
+          `<button class="chip" data-conf="grupo" data-valor="${esc(g.nombre)}" aria-pressed="${c.grupo === g.nombre}">${esc(g.nombre)} <span class="n">${conteoGrupo(g.nombre)}</span></button>`).join("")}</div>`}
+      <div><span class="eti">Temas</span> <span class="tenue" style="font-size:.82rem">(ninguno marcado = todos)</span></div>
+      <div class="chips">${conteoTemas("CONOCIMIENTO").map(([t, n]) =>
+        `<button class="chip" data-alternar="temas" data-valor="${esc(t)}" aria-pressed="${c.temas.includes(t)}">${esc(t)} <span class="n">${n}</span></button>`).join("")}</div>`;
+  } else {
+    const subtemasDe = (area) => [...new Set(E.banco.preguntas.filter((p) => p.tipoExamen === "APTITUD" && (!area || p.tema === area)).map((p) => p.subtema))].sort();
+    const areasActivas = c.areas.length ? c.areas : null;
+    const subs = areasActivas ? areasActivas.flatMap((a) => subtemasDe(a)) : subtemasDe(null);
+    const nNivel = (n) => E.banco.preguntas.filter((p) => p.tipoExamen === "APTITUD" && p.nivel === n).length;
+    const nArea = (a) => E.banco.preguntas.filter((p) => p.tipoExamen === "APTITUD" && p.tema === a).length;
+    const nSub = (s) => E.banco.preguntas.filter((p) => p.tipoExamen === "APTITUD" && p.subtema === s).length;
+    bloqueSeleccion = `
+      <p class="tenue" style="font-size:.88rem">La aptitud es común a todos los puestos.</p>
+      <div><span class="eti">Nivel</span></div>
+      <div class="chips">${[["1", "Bajo"], ["2", "Medio"], ["3", "Alto"]].map(([n, t]) =>
+        `<button class="chip" data-alternar="niveles" data-valor="${n}" aria-pressed="${c.niveles.includes(n)}">Nivel ${n} · ${t} <span class="n">${nNivel(n)}</span></button>`).join("")}</div>
+      <div><span class="eti">Área</span></div>
+      <div class="chips">${["Razonamiento verbal", "Razonamiento lógico-matemático"].map((a) =>
+        `<button class="chip" data-alternar="areas" data-valor="${esc(a)}" aria-pressed="${c.areas.includes(a)}">${esc(a)} <span class="n">${nArea(a)}</span></button>`).join("")}</div>
+      <div><span class="eti">Subtema</span> <span class="tenue" style="font-size:.82rem">(opcional)</span></div>
+      <div class="chips">${subs.map((s) =>
+        `<button class="chip" data-alternar="subtemas" data-valor="${esc(s)}" aria-pressed="${c.subtemas.includes(s)}">${esc(s)} <span class="n">${nSub(s)}</span></button>`).join("")}</div>`;
+  }
+
+  const insuficiente = disponibles < c.cantidad;
+  return `
+  ${barra("Configurar examen", etiquetaConf(c))}
+  <div class="pila">
+    <section class="panel">
+      <span class="eti">Tipo de examen</span>
+      <div class="segmento" role="group" aria-label="Tipo de examen">
+        <button data-conf="tipo" data-valor="CONOCIMIENTO" aria-pressed="${c.tipo === "CONOCIMIENTO"}">Conocimientos</button>
+        <button data-conf="tipo" data-valor="APTITUD" aria-pressed="${c.tipo === "APTITUD"}">Aptitud</button>
+      </div>
+      ${bloqueSeleccion}
+    </section>
+
+    <section class="panel">
+      <span class="eti">Cantidad de preguntas</span>
+      <div class="paso">
+        <button data-accion="menos" aria-label="Una pregunta menos" ${c.cantidad <= 1 ? "disabled" : ""}>−</button>
+        <output id="cantidad" aria-live="polite">${c.cantidad}</output>
+        <button data-accion="mas" aria-label="Una pregunta más" ${c.cantidad >= MAX_PREGUNTAS ? "disabled" : ""}>+</button>
+        <span class="tenue" style="font-size:.85rem">máximo ${MAX_PREGUNTAS} por examen</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <span class="eti">Filtros</span>
+      ${[["soloFalladas", "Solo preguntas que fallé", "Las que respondiste mal alguna vez"],
+         ["soloNoVistas", "Solo no vistas", "Las que todavía no respondiste"],
+         ["priorizarRepetidas", "Priorizar las más repetidas", "Las que salieron en más exámenes"]].map(([k, t, d]) => `
+        <label class="interruptor"><input type="checkbox" id="f-${k}" data-filtro="${k}" ${c[k] ? "checked" : ""}><span>${t}<small>${d}</small></span></label>`).join("")}
+    </section>
+
+    <section class="panel">
+      <span class="eti">Modo</span>
+      <div class="segmento" role="group" aria-label="Modo">
+        <button data-conf="modo" data-valor="PRACTICA" aria-pressed="${c.modo === "PRACTICA"}">Práctica</button>
+        <button data-conf="modo" data-valor="SIMULACRO" aria-pressed="${c.modo === "SIMULACRO"}">Simulacro</button>
+      </div>
+      <p class="tenue" style="font-size:.88rem">${c.modo === "PRACTICA" ? "Ves la respuesta y la explicación apenas contestas." : `Con temporizador de ${mmss(E.ajustes.segundos * c.cantidad)} (${String(E.ajustes.segundos / 60).replace(".", ",")} min por pregunta). Ves los resultados al final.`}</p>
+    </section>
+
+    ${insuficiente ? `<div class="aviso" role="status">
+      <strong>${disponibles ? `Solo hay ${disponibles} ${disponibles === 1 ? "pregunta" : "preguntas"} con esta configuración.` : "No hay preguntas con esta configuración."}</strong>
+      <div class="fila">
+        <button class="btn" data-accion="completar">Completar con preguntas afines</button>
+        ${disponibles ? `<button class="btn" data-accion="reducir">Reducir a ${disponibles}</button>` : ""}
+      </div>
+    </div>` : `<p class="tenue" style="font-size:.88rem">${disponibles} preguntas disponibles.</p>`}
+
+    <button class="btn primario ancho" data-accion="empezar" ${disponibles ? "" : "disabled"}>Empezar ${c.modo === "SIMULACRO" ? "simulacro" : "práctica"}</button>
+  </div>`;
+}
+
+function listaPuestos(q) {
+  const n = normalizar(q);
+  const lista = E.puestos.filter((p) => !n || p.norm.includes(n)).slice(0, 30);
+  if (!lista.length) return `<li><p class="tenue" style="padding:.6rem .8rem">Ningún puesto coincide.</p></li>`;
+  return lista.map((p) => `<li><button role="option" data-conf="puesto" data-valor="${esc(p.nombre)}" aria-selected="${E.conf.puesto === p.nombre}">
+    <span style="flex:1">${esc(p.nombre)}</span>${p.esObjetivo ? '<span class="objetivo">Objetivo</span>' : ""}</button></li>`).join("");
+}
+
+function conteoTemas(tipo) {
+  const m = new Map();
+  for (const p of E.banco.preguntas) if (p.tipoExamen === tipo) m.set(p.tema, (m.get(p.tema) || 0) + 1);
+  return [...m].sort((a, b) => b[1] - a[1]);
+}
+
+// ----- Examen -----
+function preguntaActual() { const ex = E.examen; return { ex, item: ex.items[ex.indice], p: E.porId.get(ex.items[ex.indice].id) }; }
+
+function origen(p) {
+  const f = (p.fuentes || [])[0];
+  if (!f) return "";
+  return f.puesto ? `${f.concurso} · ${f.puesto}` : f.examen || f.concurso;
+}
+
+function renderExamen() {
+  const { ex, item, p } = preguntaActual();
+  const n = ex.items.length, i = ex.indice;
+  const r = ex.resp[p.id];
+  const practica = ex.modo === "PRACTICA";
+  const mostrar = practica && r;
+  const marcada = ex.marcadas.includes(p.id);
+  const fav = E.favoritos.has(p.id);
+  const respondidas = Object.keys(ex.resp).length;
+
+  const opciones = item.perm.map((orig, pos) => {
+    const texto = p.opciones[orig] || "";
+    let clase = "", veredicto = "";
+    if (mostrar) {
+      if (orig === p.correcta) { clase = "correcta"; veredicto = "Correcta"; }
+      else if (orig === r.e) { clase = "incorrecta"; veredicto = "Tu respuesta"; }
+    }
+    const elegida = r && r.e === orig && !mostrar;
+    return `<li><button class="opcion ${clase}" data-responder="${orig}" aria-pressed="${elegida}" ${mostrar ? "disabled" : ""}>
+      <span class="burbuja">${LETRAS[pos]}</span><span>${esc(texto) || '<span class="tenue">Ver alternativa ' + LETRAS[pos] + " en la figura</span>"}</span>
+      <span class="veredicto" style="color:${clase === "correcta" ? "var(--ok)" : "var(--mal)"}">${veredicto}</span></button></li>`;
+  }).join("");
+
+  raiz.innerHTML = `<div class="app">
+    <header class="barra" style="flex-direction:column;align-items:stretch;gap:0">
+      <div style="display:flex;align-items:center;gap:.5rem">
+        <button class="icono" data-accion="salir" aria-label="Pausar y salir">${ICON.cerrar}</button>
+        <div class="titulo" style="flex:1;min-width:0"><strong>Pregunta ${i + 1} de ${n}</strong><span>${esc(ex.etiqueta)} · ${practica ? "Práctica" : "Simulacro"}</span></div>
+        ${ex.restante !== null ? `<span class="reloj ${ex.restante < 60 ? "poco" : ""}" id="reloj" aria-label="Tiempo restante">${mmss(ex.restante)}</span>` : ""}
+        <button class="icono fav" data-accion="favorito" aria-pressed="${fav}" aria-label="${fav ? "Quitar de favoritos" : "Agregar a favoritos"}">${ICON.estrella}</button>
+      </div>
+      <div class="progreso" aria-hidden="true"><i style="width:${pct(respondidas, n)}%"></i></div>
+    </header>
+
+    <div class="pila">
+      <div class="fila">
+        <span class="etiqueta">${esc(p.tema)}${p.subtema ? " · " + esc(p.subtema) : ""}${p.nivel ? " · Nivel " + esc(p.nivel) : ""}</span>
+        ${origen(p) ? `<span class="etiqueta">${esc(origen(p))}</span>` : ""}
+        ${p.apariciones > 1 ? `<span class="etiqueta repetida">Salió ${p.apariciones} veces</span>` : ""}
+        ${marcada ? `<span class="etiqueta repetida">Marcada para revisar</span>` : ""}
+      </div>
+
+      ${p.contexto ? `<details class="contexto" ${i === 0 || ex.items[i - 1] && E.porId.get(ex.items[i - 1].id).contexto !== p.contexto ? "open" : ""}>
+        <summary><span>Texto de lectura</span><span class="tenue" style="font-weight:400">mostrar / ocultar</span></summary><div>${esc(p.contexto)}</div></details>` : ""}
+
+      ${p.requiereImagen && p.imagen
+        ? `<button class="figura" data-zoom="${esc(p.imagen)}" aria-label="Ampliar la figura de la pregunta"><img src="${rutaImg(p.imagen)}" alt="Pregunta ${esc(p.id)}"><span class="lupa">Ampliar</span></button>`
+        : `<p class="enunciado">${esc(p.enunciado)}</p>`}
+
+      <ul class="opciones" aria-label="Alternativas">${opciones}</ul>
+
+      ${mostrar ? bloqueSolucion(p, r.c) : ""}
+    </div>
+  </div>
+  <div class="acciones"><div class="dentro">
+    <button class="btn" data-accion="anterior" aria-label="Pregunta anterior" ${i === 0 ? "disabled" : ""}>◀</button>
+    <button class="btn" data-accion="hoja">${ICON.hoja} Hoja ${respondidas}/${n}</button>
+    <button class="icono" data-accion="marcar" aria-pressed="${marcada}" aria-label="${marcada ? "Quitar marca" : "Marcar para revisar"}" style="color:${marcada ? "var(--marca)" : "var(--tinta)"}">${ICON.bandera}</button>
+    ${i < n - 1 ? `<button class="btn primario" data-accion="siguiente">Siguiente ▶</button>` : `<button class="btn primario" data-accion="hoja">Terminar</button>`}
+  </div></div>`;
+  ex.entrada = Date.now();
+  if (ex.restante !== null) iniciarReloj();
+}
+
+function bloqueSolucion(p, correcta) {
+  return `<section class="solucion ${correcta ? "" : "mal"}" aria-live="polite">
+    <p class="resultado" style="color:${correcta ? "var(--ok)" : "var(--mal)"}">${correcta ? "¡Correcta!" : "Incorrecta"}</p>
+    ${p.explicacion ? `<p>${esc(p.explicacion)}</p>` : ""}
+    ${p.baseLegal ? `<p class="base"><b>Base legal:</b> ${esc(p.baseLegal)}</p>` : ""}
+    ${p.imagenSolucion ? `<button class="figura" data-zoom="${esc(p.imagenSolucion)}" aria-label="Ampliar la solución"><img src="${rutaImg(p.imagenSolucion)}" alt="Solución de ${esc(p.id)}" loading="lazy"><span class="lupa">Ampliar</span></button>` : ""}
+  </section>`;
+}
+
+function tiempoEnPregunta() {
+  const ex = E.examen; if (!ex || !ex.entrada) return 0;
+  return Math.round((Date.now() - ex.entrada) / 1000);
+}
+
+function responder(orig) {
+  const { ex, p } = preguntaActual();
+  if (ex.modo === "PRACTICA" && ex.resp[p.id]) return;
+  const previo = ex.resp[p.id];
+  const t = (previo ? previo.t : 0) + tiempoEnPregunta();
+  ex.resp[p.id] = { e: orig, c: orig === p.correcta, t };
+  ex.entrada = Date.now();
+  guardarEnCurso();
+  renderExamen();
+  if (ex.modo === "SIMULACRO" && ex.indice < ex.items.length - 1) {
+    // avanza solo tras un instante para que se vea la burbuja marcada
+    setTimeout(() => { if (E.examen === ex && ex.items[ex.indice].id === p.id) { ex.indice++; renderExamen(); } }, 280);
+  }
+}
+
+function guardarEnCurso() {
+  const ex = E.examen; if (!ex) return;
+  const { entrada, ...copia } = ex;
+  E.enCurso = copia;
+  Almacen.guardarPerfil();
+}
+
+function iniciarReloj() {
+  detenerReloj();
+  temporizador = setInterval(() => {
+    const ex = E.examen;
+    if (!ex || ex.restante === null) return detenerReloj();
+    ex.restante--; ex.usado++;
+    const el = document.getElementById("reloj");
+    if (el) { el.textContent = mmss(ex.restante); el.classList.toggle("poco", ex.restante < 60); }
+    if (ex.restante <= 0) { detenerReloj(); avisar("Se acabó el tiempo."); finalizar(); }
+  }, 1000);
+}
+function detenerReloj() { if (temporizador) clearInterval(temporizador); temporizador = null; }
+
+function abrirHoja() {
+  const ex = E.examen, n = ex.items.length;
+  const sinResponder = ex.items.filter((it) => !ex.resp[it.id]).length;
+  capa.innerHTML = `<div class="hoja-fondo"><section class="hoja" role="dialog" aria-label="Hoja de respuestas">
+    <div class="fila" style="justify-content:space-between"><h2>Hoja de respuestas</h2><button class="icono" data-accion="cerrar-capa" aria-label="Cerrar">${ICON.cerrar}</button></div>
+    <div class="rejilla">${ex.items.map((it, k) => {
+      const r = ex.resp[it.id];
+      let cl = r ? (ex.modo === "PRACTICA" ? (r.c ? "ok" : "mal") : "resp") : "";
+      if (k === ex.indice) cl += " actual";
+      return `<button class="casilla ${cl}" data-ir-pregunta="${k}" aria-label="Pregunta ${k + 1}${r ? ", respondida" : ""}${ex.marcadas.includes(it.id) ? ", marcada" : ""}">${k + 1}${ex.marcadas.includes(it.id) ? '<span class="pin"></span>' : ""}</button>`;
+    }).join("")}</div>
+    <div class="leyenda"><span><i style="background:var(--acento-suave);border-color:var(--acento)"></i>Respondida</span><span><i style="background:var(--marca)"></i>Marcada</span><span><i></i>Sin responder</span></div>
+    <div id="confirmar-fin">${sinResponder ? `<p class="tenue">Te faltan ${sinResponder} de ${n}.</p>` : ""}</div>
+    <button class="btn primario ancho" data-accion="${sinResponder ? "pedir-fin" : "finalizar"}">Finalizar examen</button>
+  </section></div>`;
+}
+
+async function finalizar() {
+  const ex = E.examen; if (!ex) return;
+  detenerReloj();
+  const respuestas = ex.items.map((it) => {
+    const p = E.porId.get(it.id), r = ex.resp[it.id];
+    return { id: it.id, e: r ? r.e : null, c: !!(r && r.c), t: r ? r.t : 0, tema: p.tema };
+  });
+  const tiempo = ex.restante !== null ? ex.usado : Math.round((Date.now() - ex.creado) / 1000);
+  const intento = {
+    id: ex.id, fecha: Date.now(), modo: ex.modo, tipo: ex.tipo, etiqueta: ex.etiqueta, por: ex.por,
+    total: ex.items.length, correctas: respuestas.filter((r) => r.c).length, tiempoSeg: tiempo,
+    respuestas, perms: Object.fromEntries(ex.items.map((it) => [it.id, it.perm.join("")])),
+  };
+  E.intentos.unshift(intento);
+  E.enCurso = null; E.examen = null;
+  recalcularStats();
+  capa.innerHTML = "";
+  E.resultado = intento; E.vista = "resultados";
+  render();
+  await Almacen.guardarIntento(intento);
+  await Almacen.guardarPerfil();
+}
+
+// ----- Resultados -----
+function vResultados() {
+  const it = E.resultado;
+  if (!it) { E.vista = "progreso"; return vProgreso(); }
+  const porTema = new Map();
+  for (const r of it.respuestas) { const x = porTema.get(r.tema) || [0, 0]; x[1]++; if (r.c) x[0]++; porTema.set(r.tema, x); }
+  const errores = it.respuestas.filter((r) => !r.c).map((r) => r.id);
+  const p100 = pct(it.correctas, it.total);
+  return `
+  ${barra("Resultados", it.etiqueta, `<button class="icono" data-ir="progreso" aria-label="Cerrar">${ICON.cerrar}</button>`)}
+  <div class="pila">
+    <section class="panel">
+      <div class="puntaje">
+        <div class="grande">${it.correctas}<small>/${it.total}</small></div>
+        <div><b style="font-size:1.3rem;font-family:var(--f-display)">${p100}%</b> <span class="tenue">de aciertos</span></div>
+        <div class="tenue">Tiempo <span class="mono">${mmss(it.tiempoSeg)}</span> · ${it.modo === "SIMULACRO" ? "Simulacro" : "Práctica"} · ${fechaCorta(it.fecha)}</div>
+      </div>
+      <div class="fila">
+        ${errores.length ? `<button class="btn primario" data-accion="repetir-errores" data-ids="${esc(errores.join(","))}">Practicar mis errores (${errores.length})</button>` : ""}
+        <button class="btn" data-ir="practicar">Nuevo examen</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Por tema</h2>
+      <div class="barras">${[...porTema].map(([t, [a, n]]) => barraTema(t, a, n)).join("")}</div>
+    </section>
+
+    <section class="pila" style="padding-block:0">
+      <h2>Revisión</h2>
+      <div class="revision">${it.respuestas.map((r, k) => tarjetaRevision(r, k, it)).join("")}</div>
+    </section>
+  </div>`;
+}
+
+function barraTema(t, a, n) {
+  const v = pct(a, n);
+  return `<div class="barra-tema"><span>${esc(t)}</span><span class="mono">${a}/${n} · ${v}%</span>
+    <div class="pista-barra"><i class="${v < 50 ? "bajo" : ""}" style="width:${v}%"></i></div></div>`;
+}
+
+function tarjetaRevision(r, k, it) {
+  const p = E.porId.get(r.id);
+  if (!p) return "";
+  const perm = it.perms && it.perms[r.id] ? it.perms[r.id].split("").map(Number) : [0, 1, 2, 3];
+  const estado = r.e === null ? "vacio" : r.c ? "ok" : "mal";
+  return `<details><summary><span class="num ${estado}">${k + 1}</span><p>${p.requiereImagen ? "Pregunta con figura · " + esc(p.tema) : esc(p.enunciado)}</p></summary>
+    <div class="cuerpo">
+      ${p.contexto ? `<details class="contexto"><summary><span>Texto de lectura</span></summary><div>${esc(p.contexto)}</div></details>` : ""}
+      ${p.requiereImagen && p.imagen ? `<button class="figura" data-zoom="${esc(p.imagen)}"><img src="${rutaImg(p.imagen)}" alt="Pregunta ${esc(p.id)}" loading="lazy"><span class="lupa">Ampliar</span></button>` : ""}
+      <ul class="lista-res">${perm.map((orig, pos) => {
+        const cl = orig === p.correcta ? "ok" : orig === r.e ? "mal" : "";
+        return `<li class="${cl}"><span class="mono">${LETRAS[pos]})</span><span>${esc(p.opciones[orig]) || "(ver figura)"}${orig === r.e ? " ← tu respuesta" : ""}</span></li>`;
+      }).join("")}</ul>
+      ${r.e === null ? `<p class="tenue">No respondiste esta pregunta.</p>` : ""}
+      ${bloqueSolucion(p, r.c).replace('<p class="resultado"', '<p class="resultado" hidden')}
+      <div class="fila"><span class="etiqueta">${esc(origen(p))}</span>${p.apariciones > 1 ? `<span class="etiqueta repetida">Salió ${p.apariciones} veces</span>` : ""}
+      <button class="icono fav" data-fav="${esc(p.id)}" aria-pressed="${E.favoritos.has(p.id)}" aria-label="Favorito">${ICON.estrella}</button></div>
+    </div></details>`;
+}
+
+// ----- Progreso -----
+function idsErrores() { return [...E.stats].filter(([, x]) => x.ultima === false).map(([id]) => id).filter((id) => E.porId.has(id)); }
+
+function vProgreso() {
+  const filtro = E.filtroProgreso || "TODOS";
+  const lista = E.intentos.filter((i) => filtro === "TODOS" || i.tipo === filtro);
+  const temas = new Map();
+  for (const p of E.banco.preguntas) {
+    const k = p.tipoExamen === "APTITUD" ? p.subtema || p.tema : p.tema;
+    const x = temas.get(k) || { tipo: p.tipoExamen, total: 0, vistas: 0, acertadas: 0, resp: 0, aciertos: 0 };
+    x.total++;
+    const s = E.stats.get(p.id);
+    if (s) { x.vistas++; if (s.ultima) x.acertadas++; x.resp += s.vistas; x.aciertos += s.aciertos; }
+    temas.set(k, x);
+  }
+  const debiles = [...temas].filter(([, x]) => x.resp >= 3).map(([t, x]) => [t, pct(x.aciertos, x.resp), x.resp]).sort((a, b) => a[1] - b[1]).slice(0, 5);
+  const errores = idsErrores().length;
+
+  return `
+  ${barra("Tu progreso", `${E.intentos.length} ${E.intentos.length === 1 ? "examen" : "exámenes"} · ${E.stats.size} de ${E.banco.preguntas.length} preguntas vistas`)}
+  <div class="pila">
+    <div class="segmento" role="group" aria-label="Filtrar historial">
+      ${[["TODOS", "Todos"], ["CONOCIMIENTO", "Conocimientos"], ["APTITUD", "Aptitud"]].map(([k, t]) =>
+        `<button data-filtro-progreso="${k}" aria-pressed="${filtro === k}">${t}</button>`).join("")}
+    </div>
+
+    <section class="panel">
+      <h2>Evolución</h2>
+      ${lista.length >= 2 ? graficoEvolucion([...lista].reverse().slice(-20)) : `<p class="tenue">Completa al menos dos exámenes para ver tu evolución.</p>`}
+    </section>
+
+    <section class="panel">
+      <div class="fila" style="justify-content:space-between"><h2>Temas débiles</h2>
+      ${errores ? `<button class="btn primario" data-accion="errores">Practicar mis errores (${errores})</button>` : ""}</div>
+      ${debiles.length ? `<div class="barras">${debiles.map(([t, v, n]) => `<div class="barra-tema"><span>${esc(t)}</span><span class="mono">${v}% · ${n} resp.</span>
+        <div class="pista-barra"><i class="${v < 50 ? "bajo" : ""}" style="width:${v}%"></i></div></div>`).join("")}</div>`
+        : `<p class="tenue">Aparecerán cuando respondas al menos 3 preguntas de un tema.</p>`}
+    </section>
+
+    <section class="panel">
+      <h2>Avance del banco</h2>
+      <div class="tabla-wrap"><table>
+        <thead><tr><th>Tema</th><th class="num">Vistas</th><th class="num">Acertadas</th></tr></thead>
+        <tbody>${[...temas].sort((a, b) => (a[1].tipo > b[1].tipo ? -1 : a[1].tipo < b[1].tipo ? 1 : b[1].total - a[1].total)).map(([t, x]) =>
+          `<tr><td>${esc(t)} <span class="tenue">(${x.total})</span></td><td class="num">${pct(x.vistas, x.total)}%</td><td class="num">${pct(x.acertadas, x.total)}%</td></tr>`).join("")}</tbody>
+      </table></div>
+    </section>
+
+    <section class="panel">
+      <h2>Historial</h2>
+      ${lista.length ? `<ul class="historial">${lista.slice(0, 50).map((i) => `<li>
+          <button style="all:unset;cursor:pointer;display:contents" data-ver-intento="${esc(i.id)}">
+            <span><strong>${esc(i.etiqueta)}</strong></span>
+            <span class="pct" style="color:${pct(i.correctas, i.total) >= 60 ? "var(--ok)" : "var(--mal)"}">${pct(i.correctas, i.total)}%</span>
+            <small>${fechaCorta(i.fecha)} · ${i.correctas}/${i.total} · ${i.modo === "SIMULACRO" ? "Simulacro" : "Práctica"} · ${mmss(i.tiempoSeg)}</small>
+          </button></li>`).join("")}</ul>`
+        : `<div class="vacio"><p>Aún no terminaste ningún examen.</p><button class="btn primario" data-ir="practicar">Configurar un examen</button></div>`}
+    </section>
+  </div>`;
+}
+
+function graficoEvolucion(lista) {
+  const W = 640, H = 220, mL = 36, mR = 12, mT = 14, mB = 28;
+  const n = lista.length;
+  const x = (k) => mL + (n === 1 ? 0 : (k * (W - mL - mR)) / (n - 1));
+  const y = (v) => mT + ((100 - v) * (H - mT - mB)) / 100;
+  const pts = lista.map((i, k) => [x(k), y(pct(i.correctas, i.total))]);
+  const linea = pts.map(([a, b], k) => (k ? "L" : "M") + a.toFixed(1) + " " + b.toFixed(1)).join(" ");
+  const area = linea + ` L${pts[n - 1][0].toFixed(1)} ${y(0)} L${pts[0][0].toFixed(1)} ${y(0)} Z`;
+  const ult = pts[n - 1];
+  return `<svg class="grafico" viewBox="0 0 ${W} ${H}" role="img" aria-label="Porcentaje de aciertos en los últimos ${n} exámenes">
+    ${[0, 50, 100].map((v) => `<line x1="${mL}" x2="${W - mR}" y1="${y(v)}" y2="${y(v)}" stroke="var(--linea)" stroke-width="1"/>
+      <text x="${mL - 6}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="var(--tenue)" font-family="IBM Plex Mono, monospace">${v}%</text>`).join("")}
+    <line x1="${mL}" x2="${W - mR}" y1="${y(60)}" y2="${y(60)}" stroke="var(--marca)" stroke-width="1" stroke-dasharray="4 4"/>
+    <text x="${W - mR}" y="${y(60) - 5}" text-anchor="end" font-size="11" fill="var(--marca)">60%</text>
+    <path d="${area}" fill="var(--acento-suave)" stroke="none"/>
+    <path d="${linea}" fill="none" stroke="var(--acento)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pts.map(([a, b]) => `<circle cx="${a}" cy="${b}" r="3" fill="var(--acento)"/>`).join("")}
+    <circle cx="${ult[0]}" cy="${ult[1]}" r="6" fill="var(--superficie)" stroke="var(--acento)" stroke-width="3"/>
+    <text x="${mL}" y="${H - 8}" font-size="12" fill="var(--tenue)">Más antiguo</text>
+    <text x="${W - mR}" y="${H - 8}" font-size="12" fill="var(--tenue)" text-anchor="end">Último: ${pct(lista[n - 1].correctas, lista[n - 1].total)}%</text>
+  </svg>`;
+}
+
+// ----- Favoritos -----
+function vFavoritos() {
+  const ids = [...E.favoritos].filter((id) => E.porId.has(id));
+  return `${barra("Favoritos", `${ids.length} ${ids.length === 1 ? "pregunta" : "preguntas"}`, `<button class="icono" data-ir="mas" aria-label="Volver">${ICON.cerrar}</button>`)}
+  <div class="pila">
+    ${ids.length ? `<button class="btn primario ancho" data-accion="practicar-favoritos">Practicar ${Math.min(ids.length, MAX_PREGUNTAS)} favoritas</button>
+    <div class="revision">${ids.map((id, k) => {
+      const p = E.porId.get(id);
+      return `<details><summary><span class="num vacio">${k + 1}</span><p>${p.requiereImagen ? "Pregunta con figura · " + esc(p.tema) : esc(p.enunciado)}</p></summary>
+        <div class="cuerpo">
+          ${p.requiereImagen && p.imagen ? `<button class="figura" data-zoom="${esc(p.imagen)}"><img src="${rutaImg(p.imagen)}" alt="Pregunta ${esc(p.id)}" loading="lazy"><span class="lupa">Ampliar</span></button>` : ""}
+          <ul class="lista-res">${[0, 1, 2, 3].map((o) => `<li class="${o === p.correcta ? "ok" : ""}"><span class="mono">${LETRAS[o]})</span><span>${esc(p.opciones[o]) || "(ver figura)"}</span></li>`).join("")}</ul>
+          ${bloqueSolucion(p, true).replace('<p class="resultado"', '<p class="resultado" hidden')}
+          <div class="fila"><span class="etiqueta">${esc(p.tema)}</span><button class="btn" data-fav="${esc(id)}" aria-pressed="true">Quitar de favoritos</button></div>
+        </div></details>`;
+    }).join("")}</div>` : `<div class="vacio"><p>Toca la estrella durante un examen para guardar preguntas aquí.</p></div>`}
+  </div>`;
+}
+
+// ----- Más -----
+function vMas() {
+  const a = E.ajustes;
+  return `${barra("Más", "")}
+  <div class="pila">
+    <button class="atajo" data-ir="favoritos"><strong>Favoritos</strong><span>${E.favoritos.size} preguntas guardadas</span>${ICON.flecha}</button>
+
+    <section class="panel">
+      <h2>Ajustes</h2>
+      <div><span class="eti">Tamaño de letra</span></div>
+      <div class="paso">
+        <button data-accion="letra" data-valor="-0.1" aria-label="Letra más pequeña" ${a.escala <= 0.85 ? "disabled" : ""}>A−</button>
+        <output class="mono" style="font-size:1.1rem">${Math.round(a.escala * 100)}%</output>
+        <button data-accion="letra" data-valor="0.1" aria-label="Letra más grande" ${a.escala >= 1.4 ? "disabled" : ""}>A+</button>
+      </div>
+      <div><span class="eti">Tiempo por pregunta en simulacro</span></div>
+      <div class="chips">${[60, 90, 120, 180].map((s) =>
+        `<button class="chip" data-accion="segundos" data-valor="${s}" aria-pressed="${a.segundos === s}">${String(s / 60).replace(".", ",")} min</button>`).join("")}</div>
+      <p class="tenue" style="font-size:.85rem">El modo oscuro sigue la configuración de tu teléfono o de Claude. Las figuras se muestran siempre sobre fondo blanco.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Tu progreso</h2>
+      <p>${E.almacenTipo === "cuenta" ? "Se guarda en tu cuenta de Claude: puedes seguir en el celular o la computadora, y solo tú lo ves." : "Se guarda en este navegador. Si borras los datos del navegador, se pierde."}</p>
+      <div id="zona-borrar"><button class="btn peligro" data-accion="pedir-borrar">Borrar todo mi progreso</button></div>
+    </section>
+
+    <section class="panel">
+      <h2>Acerca de</h2>
+      <p>Banco de ${E.banco.preguntas.length} preguntas (versión ${E.banco.version}), ${E.puestos.length} puestos y ${E.grupos.length} grupos afines.</p>
+      <p class="tenue">Fuente: solucionarios publicados por la Contraloría General de la República del Perú. Herramienta de práctica personal, sin relación oficial con la institución.</p>
+    </section>
+  </div>`;
+}
+
+// ---------- Visor con zoom ----------
+function abrirVisor(ruta) {
+  capa.innerHTML = `<div class="visor" role="dialog" aria-label="Figura ampliada">
+    <p class="pista">Pellizca o usa + / − para acercar. Arrastra para mover.</p>
+    <div class="lienzo" id="lienzo"><img id="img-visor" src="${rutaImg(ruta)}" alt="Figura ampliada" draggable="false"></div>
+    <div class="controles"><button data-zoom-paso="-1" aria-label="Alejar">−</button><button data-zoom-paso="0" aria-label="Restablecer">1:1</button><button data-zoom-paso="1" aria-label="Acercar">+</button><button data-accion="cerrar-capa">Cerrar</button></div>
+  </div>`;
+  const lienzo = document.getElementById("lienzo"), img = document.getElementById("img-visor");
+  const z = { s: 1, x: 0, y: 0 };
+  const punteros = new Map();
+  let inicio = null, ultimoToque = 0;
+  const aplicar = () => { z.s = Math.min(6, Math.max(1, z.s)); if (z.s === 1) { z.x = 0; z.y = 0; } img.style.transform = `translate(${z.x}px, ${z.y}px) scale(${z.s})`; };
+  aplicar();
+  E.visorZoom = (paso) => { z.s = paso === 0 ? 1 : z.s * (paso > 0 ? 1.4 : 1 / 1.4); aplicar(); };
+  lienzo.addEventListener("pointerdown", (e) => {
+    lienzo.setPointerCapture(e.pointerId);
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const ahora = Date.now();
+    if (punteros.size === 1 && ahora - ultimoToque < 300) { z.s = z.s > 1 ? 1 : 2.5; aplicar(); }
+    ultimoToque = ahora;
+    inicio = { s: z.s, x: z.x, y: z.y, pts: [...punteros.values()].map((p) => ({ ...p })) };
+  });
+  lienzo.addEventListener("pointermove", (e) => {
+    if (!punteros.has(e.pointerId) || !inicio) return;
+    punteros.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = [...punteros.values()];
+    if (pts.length >= 2 && inicio.pts.length >= 2) {
+      const d0 = Math.hypot(inicio.pts[0].x - inicio.pts[1].x, inicio.pts[0].y - inicio.pts[1].y) || 1;
+      const d1 = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      z.s = inicio.s * (d1 / d0);
+    } else if (pts.length === 1 && z.s > 1) {
+      z.x = inicio.x + (pts[0].x - inicio.pts[0].x);
+      z.y = inicio.y + (pts[0].y - inicio.pts[0].y);
+    }
+    aplicar();
+  });
+  const soltar = (e) => { punteros.delete(e.pointerId); inicio = { s: z.s, x: z.x, y: z.y, pts: [...punteros.values()].map((p) => ({ ...p })) }; };
+  lienzo.addEventListener("pointerup", soltar);
+  lienzo.addEventListener("pointercancel", soltar);
+  lienzo.addEventListener("wheel", (e) => { e.preventDefault(); z.s *= e.deltaY < 0 ? 1.15 : 1 / 1.15; aplicar(); }, { passive: false });
+}
+
+// ---------- Acciones ----------
+let toastT = null;
+function avisar(texto) {
+  let t = document.querySelector(".toast");
+  if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+  t.textContent = texto; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 2600);
+}
+
+function guardarConf() { local.escribir("simcgr.conf", E.conf); }
+
+function iniciarExamen(items, conf, etiqueta) {
+  if (!items.length) return avisar("No hay preguntas para armar el examen.");
+  E.examen = nuevoExamen(items, conf, etiqueta);
+  E.vista = "examen";
+  guardarEnCurso();
+  render();
+}
+
+function examenDesdeIds(ids, etiqueta, modo = "PRACTICA") {
+  const elegidos = [...ids].sort(() => Math.random() - 0.5).slice(0, MAX_PREGUNTAS).map((id) => E.porId.get(id)).filter(Boolean);
+  const tipo = elegidos.every((p) => p.tipoExamen === "APTITUD") ? "APTITUD" : "CONOCIMIENTO";
+  iniciarExamen(elegidos.map((p) => ({ id: p.id, perm: permutacion(p) })), { ...E.conf, modo, tipo }, etiqueta);
+}
+
+function empezarConConf(conf, relajacion = 0) {
+  const pool = construirPool(conf, relajacion);
+  const items = generar(pool, conf.cantidad, conf);
+  iniciarExamen(items, conf, etiquetaConf(conf));
+}
+
+function confirmarReemplazo(accion) {
+  if (!E.enCurso) return accion();
+  capa.innerHTML = `<div class="hoja-fondo"><section class="hoja" role="dialog" aria-label="Examen en pausa">
+    <h2>Tienes un examen en pausa</h2>
+    <p>${esc(E.enCurso.etiqueta)} · ${Object.keys(E.enCurso.resp).length} de ${E.enCurso.items.length} respondidas. Si empiezas otro, ese se descarta.</p>
+    <div class="fila"><button class="btn primario" data-accion="reemplazar">Descartar y empezar</button><button class="btn" data-accion="retomar">Retomar el pausado</button><button class="btn" data-accion="cerrar-capa">Cancelar</button></div>
+  </section></div>`;
+  E.trasConfirmar = accion;
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button, [data-accion]");
+  if (!t) return;
+  const d = t.dataset;
+
+  if (d.ir) { E.vista = d.ir; capa.innerHTML = ""; return render(); }
+  if (d.zoom) return abrirVisor(d.zoom);
+  if (d.zoomPaso !== undefined) return E.visorZoom && E.visorZoom(Number(d.zoomPaso));
+  if (d.responder !== undefined) return responder(Number(d.responder));
+  if (d.irPregunta !== undefined) { capa.innerHTML = ""; E.examen.indice = Number(d.irPregunta); return renderExamen(); }
+  if (d.fav) {
+    alternarFavorito(d.fav);
+    if (E.vista === "favoritos") return render();
+    t.setAttribute("aria-pressed", String(E.favoritos.has(d.fav)));   // sin re-render: la tarjeta sigue abierta
+    return;
+  }
+  if (d.verIntento) { E.resultado = E.intentos.find((i) => i.id === d.verIntento); E.vista = "resultados"; return render(); }
+  if (d.filtroProgreso) { E.filtroProgreso = d.filtroProgreso; return render(); }
+
+  if (d.conf) {
+    const c = E.conf;
+    c[d.conf] = d.valor;
+    if (d.conf === "tipo") { c.temas = []; c.subtemas = []; }
+    guardarConf(); return render();
+  }
+  if (d.alternar) {
+    const lista = E.conf[d.alternar], i = lista.indexOf(d.valor);
+    i >= 0 ? lista.splice(i, 1) : lista.push(d.valor);
+    if (d.alternar === "areas") E.conf.subtemas = [];
+    guardarConf(); return render();
+  }
+
+  switch (d.accion) {
+    case "cerrar-capa":
+      if (e.target === t || t.tagName === "BUTTON") capa.innerHTML = "";
+      return;
+    case "rapido": {
+      const conf = { ...CONF_DEFECTO(), tipo: d.tipo, modo: E.conf.modo };
+      return confirmarReemplazo(() => empezarConConf(conf));
+    }
+    case "errores": return confirmarReemplazo(() => examenDesdeIds(idsErrores(), "Mis errores"));
+    case "repetir-errores": return confirmarReemplazo(() => examenDesdeIds(d.ids.split(","), "Mis errores"));
+    case "practicar-favoritos": return confirmarReemplazo(() => examenDesdeIds([...E.favoritos].filter((id) => E.porId.has(id)), "Favoritos"));
+    case "empezar": return confirmarReemplazo(() => empezarConConf(E.conf));
+    case "completar": {
+      for (let nivel = 1; nivel <= 3; nivel++) {
+        if (construirPool(E.conf, nivel).length >= E.conf.cantidad || nivel === 3) {
+          const conf = E.conf;
+          return confirmarReemplazo(() => empezarConConf(conf, nivel));
+        }
+      }
+      return;
+    }
+    case "reducir": E.conf.cantidad = Math.max(1, construirPool(E.conf, 0).length); guardarConf(); return render();
+    case "menos": E.conf.cantidad = Math.max(1, E.conf.cantidad - 1); guardarConf(); return render();
+    case "mas": E.conf.cantidad = Math.min(MAX_PREGUNTAS, E.conf.cantidad + 1); guardarConf(); return render();
+    case "reemplazar": capa.innerHTML = ""; E.enCurso = null; { const f = E.trasConfirmar; E.trasConfirmar = null; f && f(); } return;
+    case "retomar":
+      capa.innerHTML = "";
+      if (!E.enCurso) return;
+      E.examen = { ...E.enCurso }; E.vista = "examen"; return render();
+    case "descartar": E.enCurso = null; Almacen.guardarPerfil(); return render();
+    case "salir":
+      guardarEnCurso(); E.examen = null; E.vista = "inicio"; avisar("Examen en pausa. Puedes retomarlo desde Inicio."); return render();
+    case "anterior": if (E.examen.indice > 0) { E.examen.indice--; renderExamen(); } return;
+    case "siguiente": if (E.examen.indice < E.examen.items.length - 1) { E.examen.indice++; renderExamen(); } return;
+    case "marcar": {
+      const id = E.examen.items[E.examen.indice].id, m = E.examen.marcadas, i = m.indexOf(id);
+      i >= 0 ? m.splice(i, 1) : m.push(id);
+      guardarEnCurso(); return renderExamen();
+    }
+    case "favorito": alternarFavorito(E.examen.items[E.examen.indice].id); return renderExamen();
+    case "hoja": return abrirHoja();
+    case "pedir-fin": {
+      const z = document.getElementById("confirmar-fin");
+      z.innerHTML = `<div class="aviso"><strong>¿Finalizar con preguntas sin responder?</strong><p>Las que no respondiste cuentan como incorrectas.</p>
+        <div class="fila"><button class="btn primario" data-accion="finalizar">Sí, finalizar</button><button class="btn" data-accion="cerrar-capa">Seguir respondiendo</button></div></div>`;
+      t.hidden = true; return;
+    }
+    case "finalizar": return finalizar();
+    case "letra":
+      E.ajustes.escala = Math.round(Math.min(1.4, Math.max(0.85, E.ajustes.escala + Number(d.valor))) * 100) / 100;
+      aplicarAjustes(); return render();
+    case "segundos": E.ajustes.segundos = Number(d.valor); aplicarAjustes(); return render();
+    case "pedir-borrar":
+      document.getElementById("zona-borrar").innerHTML = `<div class="aviso error"><strong>¿Borrar historial, errores, favoritos y examen en pausa?</strong><p>No se puede deshacer.</p>
+        <div class="fila"><button class="btn peligro" data-accion="borrar">Sí, borrar todo</button><button class="btn" data-ir="mas">Cancelar</button></div></div>`;
+      return;
+    case "borrar":
+      Almacen.borrarTodo().then(() => { recalcularStats(); avisar("Progreso borrado."); render(); });
+      return;
+  }
+});
+
+// cerrar capas tocando el fondo oscuro
+capa.addEventListener("click", (e) => { if (e.target.classList.contains("hoja-fondo")) capa.innerHTML = ""; });
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "buscar-puesto") document.getElementById("sugerencias").innerHTML = listaPuestos(e.target.value);
+});
+document.addEventListener("change", (e) => {
+  const k = e.target.dataset && e.target.dataset.filtro;
+  if (k) { E.conf[k] = e.target.checked; guardarConf(); render(); }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && capa.innerHTML) capa.innerHTML = "";
+  if (E.vista !== "examen" || !E.examen || capa.innerHTML || e.target.tagName === "INPUT") return;
+  const i = "abcd".indexOf(e.key.toLowerCase());
+  if (i >= 0) { const it = E.examen.items[E.examen.indice]; responder(it.perm[i]); }
+  if (e.key === "ArrowRight" && E.examen.indice < E.examen.items.length - 1) { E.examen.indice++; renderExamen(); }
+  if (e.key === "ArrowLeft" && E.examen.indice > 0) { E.examen.indice--; renderExamen(); }
+});
+// guarda el tiempo restante si la pestaña se oculta o se cierra
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden" && E.examen) guardarEnCurso();
+});
+
+function alternarFavorito(id) {
+  E.favoritos.has(id) ? E.favoritos.delete(id) : E.favoritos.add(id);
+  avisar(E.favoritos.has(id) ? "Agregada a favoritos" : "Quitada de favoritos");
+  Almacen.guardarPerfil();
+}
+
+function aplicarAjustes() {
+  document.documentElement.style.setProperty("--escala", E.ajustes.escala);
+  local.escribir("simcgr.ajustes", E.ajustes);
+}
+
+// ---------- Arranque ----------
+(async function arrancar() {
+  aplicarAjustes();
+  try {
+    await cargarBanco();
+  } catch (err) {
+    raiz.innerHTML = `<div class="app"><div class="cargando"><div class="aviso error"><strong>No se pudo cargar el banco de preguntas.</strong><p>Revisa tu conexión y vuelve a abrir la página.</p></div></div></div>`;
+    return;
+  }
+  const guardada = local.leer("simcgr.conf", null);
+  E.conf = { ...CONF_DEFECTO(), ...(guardada || {}) };
+  E.conf.cantidad = Math.min(MAX_PREGUNTAS, Math.max(1, E.conf.cantidad | 0 || 10));
+  if (!E.puestos.some((p) => p.nombre === E.conf.puesto)) E.conf.puesto = PUESTO_OBJETIVO;
+  raiz.innerHTML = `<div class="cargando"><p>Cargando tu progreso…</p></div>`;
+  await Almacen.iniciar();
+  recalcularStats();
+  render();
+})();
+</script>
+
+</body>
+</html>
